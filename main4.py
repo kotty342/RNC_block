@@ -73,28 +73,33 @@ def run_simulation(data_size, piece_size, num_nodes):
     detected_tampered = 0
     successful_decodes = 0
 
-    # 各ノードでデータを受信し、改ざんをシミュレート
+    # ノード間で符号化ピースをランダムに送受信
+    nodes = [encoded_pieces.copy() for _ in range(num_nodes)]
     for node in range(num_nodes):
         # 一部の符号化ピースを改ざん
         tampered_index = random.randint(0, total_pieces - 1)
-        encoded_pieces[tampered_index] = bytearray(random.getrandbits(8) for _ in range(piece_size))
+        nodes[node][tampered_index] = bytearray(random.getrandbits(8) for _ in range(piece_size))
         tampered_indices.append(tampered_index)
         print(f"Node {node}: Tampered data piece at index {tampered_index}")
 
-        # データの受信と検証
+        # 他のノードからランダムに符号化ピースを受信
         received_pieces = []
-        for i, piece in enumerate(encoded_pieces):
+        for _ in range(total_pieces):
+            sender_node = random.randint(0, num_nodes - 1)
+            piece_index = random.randint(0, total_pieces - 1)
+            piece = nodes[sender_node][piece_index]
             if verify_data(piece):
                 received_pieces.append(piece)
             else:
-                print(f"Node {node}: Data piece {i} is corrupted!")
-                detected_tampered += 1
+                print(f"Node {node}: Data piece {piece_index} from Node {sender_node} is corrupted!")
+                if piece_index not in tampered_indices:
+                    detected_tampered += 1
 
         # 改ざんされたピースを除外してデータの復号化
-        if len(received_pieces) * piece_size >= data_size:
+        if len(received_pieces) >= data_size // piece_size:
             try:
-                decoded_data = decode_data(received_pieces[:data_size // piece_size], piece_size, data_size)
-                if decoded_data == data:
+                decoded_data = decode_data(received_pieces, piece_size, data_size)
+                if decoded_data[:data_size] == data:
                     successful_decodes += 1
                 else:
                     print(f"Node {node}: Decoded data does not match original data!")

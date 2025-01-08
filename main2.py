@@ -38,9 +38,23 @@ def generate_data(size):
 
 # データを符号化ピースに分割
 def encode_data(data, piece_size):
-    return [data[i:i + piece_size] for i in range(0, len(data), piece_size)]
+    pieces = [data[i:i + piece_size] for i in range(0, len(data), piece_size)]
+    return pieces
 
-# ハッシュ値を計算
+# データの破損を検出
+def is_data_corrupted(data_piece):
+    # ここでは単純な例として、データピースが特定の条件を満たすかどうかをチェック
+    return data_piece == b'corrupted'
+
+# データの検証
+def validate_data(data_pieces):
+    valid_pieces = [piece for piece in data_pieces if not is_data_corrupted(piece)]
+    if len(valid_pieces) < len(data_pieces) // 2:
+        print("Not enough valid pieces to reconstruct the original data.")
+        return False
+    return True
+
+# データのハッシュ値を計算
 def calculate_hash(data_piece):
     return hashlib.sha256(data_piece).hexdigest()
 

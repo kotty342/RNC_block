@@ -88,25 +88,23 @@ def run_simulation(data_size, piece_size, num_nodes):
             sender_node = random.randint(0, num_nodes - 1)
             piece_index = random.randint(0, total_pieces - 1)
             piece = nodes[sender_node][piece_index]
-            if verify_data(piece):
-                received_pieces.append(piece)
-            else:
-                print(f"Node {node}: Data piece {piece_index} from Node {sender_node} is corrupted!")
-                if piece_index not in tampered_indices:
-                    detected_tampered += 1
+            received_pieces.append(piece)
 
         # 改ざんされたピースを除外してデータの復号化
-        if len(received_pieces) >= data_size // piece_size:
+        valid_pieces = [piece for piece in received_pieces if verify_data(piece)]
+
+        if len(valid_pieces) * piece_size >= data_size:
             try:
-                decoded_data = decode_data(received_pieces, piece_size, data_size)
-                if decoded_data[:data_size] == data:
+                rs = reedsolo.RSCodec(len(valid_pieces) - data_size // piece_size)
+                decoded_data = rs.decode(b''.join(valid_pieces[:data_size // piece_size]))
+                if decoded_data == data:
                     successful_decodes += 1
                 else:
-                    print(f"Node {node}: Decoded data does not match original data!")
-            except reedsolo.ReedSolomonError:
-                print(f"Node {node}: Reed-Solomon decoding failed!")
+                    print("Decoded data mismatch!")
+            except reedsolo.ReedSolomonError as e:
+                print(f"Reed-Solomon decoding failed: {e}")
         else:
-            print(f"Node {node}: Not enough valid pieces to reconstruct the original data.")
+            print("Not enough valid pieces to reconstruct the original data.")
 
         print(f"Node {node}: Simulation completed successfully.")
     
